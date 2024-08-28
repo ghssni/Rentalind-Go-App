@@ -8,3 +8,4 @@ type Game struct {
 	RentalCost  float64 `json:"rental_cost"`
 	Category     string  `json:"category"`
 }
+

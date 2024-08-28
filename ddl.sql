@@ -24,11 +24,14 @@ CREATE TABLE rental_history (
 );
 
 -- dbdiagram.io code
+
 Table users {
   id INT [pk, increment]
+  name string
+  address string
   email VARCHAR(255) [not null, unique]
   password VARCHAR(255) [not null]
-  deposit_amount DECIMAL(10,2) [default: 0]
+  deposit DECIMAL(10,2) [default: 0]
 }
 
 Table rentals {
@@ -43,9 +46,18 @@ Table rental_history {
   id INT [pk, increment]
   user_id INT [not null]
   rental_id INT [not null]
+  payment_id INT [not null]
   rental_start_date DATETIME [not null]
   rental_end_date DATETIME [not null]
 }
 
+Table payment {
+  id INT [pk, increment]
+  amount DECIMAL(10,2)
+  status string
+  url string
+}
+
+ref: payment.id - rental_history.payment_id
 ref: rental_history.user_id > users.id
 ref: rental_history.rental_id > rentals.id
