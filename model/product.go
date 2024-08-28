@@ -1,7 +1,7 @@
 package models
 
-// Game struct represents a game in the database
-type Game struct {
+// Book struct represents a Book in the database
+type Book struct {
 	ID           int     `json:"id"`
 	Name         string  `json:"name"`
 	Availability bool    `json:"availability"`
