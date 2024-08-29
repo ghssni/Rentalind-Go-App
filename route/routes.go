@@ -30,7 +30,9 @@ func SetupRoutes(e *echo.Echo, db *gorm.DB) {
 	}
 
 	// Endpoint yang dilindungi oleh middleware JWT
-	// e.GET("/rentals", controllers.GetAllRentals, jwt.WithConfig(config))
-	// e.GET("/rentals/active", controllers.GetActiveRentals, jwt.WithConfig(config))
-	// e.GET("/vehicles/availability", controllers.GetVehicleAvailability, jwt.WithConfig(config))
+	e.POST("/topup/:user_id", handlers.TopUp)
+	e.POST("/topup/user/:user_id", handlers.TopupUser)
+	e.POST("/rentals/:user_id", handlers.RentProducts)
+	e.GET("/booking-report", handlers.GetBookingReport)
+	e.GET("/booking-report/user/:user_id", handlers.GetBookingReportUser)
 }
