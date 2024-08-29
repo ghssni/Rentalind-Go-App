@@ -2,44 +2,127 @@ package handlers
 
 import (
 	"net/http"
+	"Rentalind-Go-App/models"
 
-	"github.com/gin-gonic/gin"
-	"github.com/ghssni/Rentalind-Go-App/models"
-	"github.com/ghssni/Rentalind-Go-App/utils"
+	"github.com/labstack/echo/v4"
 )
 
-// CreateRentalHandler handles the creation of a new rental
-func CreateRentalHandler(c *gin.Context) {
-	// Bind JSON data to Rental struct
-	var rental models.Rental
-	if err := c.BindJSON(&rental); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Create a new rental in the database
-	err := utils.CreateRental(&rental)
+// RentProducts handles rental requests
+func RentProducts(c echo.Context) error {
+	db := c.Get("db").(*gorm.DB)
+	userID, err := strconv.Atoi(c.Param("user_id"))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "Invalid user ID",
+		})
 	}
 
-	// Return success response
-	c.JSON(http.StatusCreated, gin.H{"message": "Rental created successfully", "id": rental.ID})
+	user := new(models.User)
+	result := db.First(&user, userID)
+	if result.Error != nil {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "User not found",
+		})
+	}
+
+	rentalID, err := strconv.Atoi(c.FormValue("rental_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "Invalid rental ID",
+		})
+	}
+
+	rental := new(models.Rental)
+	result = db.First(&rental, rentalID)
+	if result.Error != nil {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "Rental not found",
+		})
+	}
+
+	if rental.Availability == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "Rental is not available",
+		})
+	}
+
+	rentalHistory := new(models.RentalHistory)
+	rentalHistory.UserID = user.ID
+	rentalHistory.RentalID = rental.ID
+	rentalHistory.PaymentID = 0 // assume payment ID is 0 for now
+	rentalHistory.RentalStartDate = time.Now()
+	rentalHistory.RentalEndDate = time.Now().AddDate(0, 0, 7) // assume 7-day rental period
+
+	result = db.Create(&rentalHistory)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"message": "Failed to create rental history",
+		})
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "Rental successful",
+		"rental_id": rentalHistory.ID,
+	})
 }
+	
+// GetBookingReport handles getting the booking report
+func GetBookingReport(c echo.Context) error {
+	db := c.Get("db").(*gorm.DB)
 
-// GetRentalHandler handles the retrieval of a rental by ID
-func GetRentalHandler(c *gin.Context) {
-	// Get rental ID from URL parameter
-	rentalID := c.Param("id")
-
-	// Retrieve rental from the database
-	rental, err := utils.GetRental(rentalID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Rental not found"})
-		return
+	var rentalHistories []models.RentalHistory
+	result := db.Find(&rentalHistories)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"message": "Failed to retrieve rental histories",
+		})
 	}
 
-	// Return rental details
-	c.JSON(http.StatusOK, rental)
+	var bookingReport []map[string]interface{}
+	for _, rentalHistory := range rentalHistories {
+		bookingReportItem := map[string]interface{}{
+			"rental_id": rentalHistory.RentalID,
+			"user_id":   rentalHistory.UserID,
+			"start_date": rentalHistory.RentalStartDate,
+			"end_date":   rentalHistory.RentalEndDate,
+		}
+		bookingReport = append(bookingReport, bookingReportItem)
+	}
+
+return c.JSON(http.StatusOK, echo.Map{
+	"booking_report": bookingReport,
+})
+}
+	
+// GetBookingReportUser handles getting the booking report for a specific user
+func GetBookingReportUser(c echo.Context) error {
+	db := c.Get("db").(*gorm.DB)
+	userID, err := strconv.Atoi(c.Param("user_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "Invalid user ID",
+		})
+	}
+
+	var rentalHistories []models.RentalHistory
+	result := db.Where("user_id = ?", userID).Find(&rentalHistories)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"message": "Failed to retrieve rental histories",
+		})
+	}
+
+	var bookingReport []map[string]interface{}
+	for _, rentalHistory := range rentalHistories {
+		bookingReportItem := map[string]interface{}{
+			"rental_id": rentalHistory.RentalID,
+			"start_date": rentalHistory.RentalStartDate,
+			"end_date":   rentalHistory.RentalEndDate,
+		}
+		bookingReport = append(bookingReport, bookingReportItem)
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"booking_report": bookingReport,
+	})
 }
