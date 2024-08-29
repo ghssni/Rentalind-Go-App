@@ -5,6 +5,7 @@ import (
 	"Rentalind-Go-App/models"
 
 	"github.com/labstack/echo/v4"
+	"github.com/xendit/xendit-go"
 )
 
 // RentProducts handles rental requests
@@ -60,6 +61,38 @@ func RentProducts(c echo.Context) error {
 		})
 	}
 
+	// Create a payment request
+	paymentRequest := &xendit.PaymentRequest{
+		Amount: 10000,
+		Currency: "IDR",
+		PaymentMethod: "credit_card",
+		Card: &xendit.Card{
+			Token: "CARD_TOKEN",
+		},
+	}
+
+	// Process the payment
+	xenditClient, err := xendit.NewClient("YOUR_API_KEY", "YOUR_API_SECRET")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"message": "Failed to create Xendit client",
+		})
+	}
+
+	payment, err := xenditClient.CreatePayment(paymentRequest)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"message": "Failed to process payment",
+		})
+	}
+
+	// Update the rental history with the payment ID
+	rentalHistory.PaymentID = payment.ID
+
+	// Send a success email to the user
+	SendSuccessCreateRent(user.Email)
+
+	// Return a success response
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "Rental successful",
 		"rental_id": rentalHistory.ID,
