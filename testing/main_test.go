@@ -33,3 +33,25 @@ func TestGetRental(t *testing.T) {
 	assert.Equal(t, rentalExpected.RentDate, res.RentDate, "RentDate should be same")
 	assert.Equal(t, rentalExpected.ReturnDate, res.ReturnDate, "ReturnDate should be same")
 }
+
+var mailRepo = &repository.MailRepoMock{Mock: mock.Mock{}}
+var mailHandler = handler.MailHandler{Repo: mailRepo}
+
+func TestSendSuccessCreateRent(t *testing.T) {
+	email := "user@example.com"
+	mailRepo.Mock.On("SendMail", email, "Rental Successful", "Your rental has been successfully created. Thank you for using our service!").Return(nil)
+
+	err := mailHandler.SendSuccessCreateRent(email)
+
+	assert.Nil(t, err)
+}
+
+func TestSendMailError(t *testing.T) {
+	email := "user@example.com"
+	mailRepo.Mock.On("SendMail", email, "Rental Successful", "Your rental has been successfully created. Thank you for using our service!").Return(errors.New("email sending error"))
+
+	err := mailHandler.SendSuccessCreateRent(email)
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "email sending error", err.Error())
+}
