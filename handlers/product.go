@@ -2,44 +2,65 @@ package handlers
 
 import (
 	"net/http"
+	"Rentalind-Go-App/models"
 
-	"github.com/gin-gonic/gin"
-	"github.com/ghssni/Rentalind-Go-App/models"
-	"github.com/ghssni/Rentalind-Go-App/utils"
+	"github.com/labstack/echo/v4"
 )
 
-// CreateGameHandler handles the creation of a new game
-func CreateGameHandler(c *gin.Context) {
-	// Bind JSON data to Game struct
-	var game models.Game
-	if err := c.BindJSON(&game); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+// CreateBook handles creating a new book
+func CreateBook(c echo.Context) error {
+	db := c.Get("db").(*gorm.DB)
+	book := new(models.Book)
+	if err := c.Bind(book); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "Invalid book data",
+		})
 	}
 
-	// Create a new game in the database
-	err := utils.CreateGame(&game)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	result := db.Create(book)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"message": "Failed to create book",
+		})
 	}
 
-	// Return success response
-	c.JSON(http.StatusCreated, gin.H{"message": "Game created successfully", "id": game.ID})
+	return c.JSON(http.StatusCreated, echo.Map{
+		"message": "Book created successfully",
+		"book_id": book.ID,
+	})
 }
 
-// GetGameHandler handles the retrieval of a game by ID
-func GetGameHandler(c *gin.Context) {
-	// Get game ID from URL parameter
-	gameID := c.Param("id")
-
-	// Retrieve game from the database
-	game, err := utils.GetGame(gameID)
+// GetBook handles getting a book by ID
+func GetBook(c echo.Context) error {
+	db := c.Get("db").(*gorm.DB)
+	bookID, err := strconv.Atoi(c.Param("book_id"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Game not found"})
-		return
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "Invalid book ID",
+		})
 	}
 
-	// Return game details
-	c.JSON(http.StatusOK, game)
+	book := new(models.Book)
+	result := db.First(book, bookID)
+	if result.Error != nil {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "Book not found",
+		})
+	}
+
+	return c.JSON(http.StatusOK, book)
+}
+
+// GetAllBooks handles getting all books
+func GetAllBooks(c echo.Context) error {
+	db := c.Get("db").(*gorm.DB)
+	var books []models.Book
+	result := db.Find(&books)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"message": "Failed to retrieve books",
+		})
+	}
+
+	return c.JSON(http.StatusOK, books)
 }

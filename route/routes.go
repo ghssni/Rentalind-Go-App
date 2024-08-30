@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"github.com/gin-gonic/gin"
-	
 	"Rentalind-Go-App/controllers"
 
 	jwt "github.com/labstack/echo-jwt/v4"
@@ -34,9 +32,14 @@ func SetupRoutes(e *echo.Echo, db *gorm.DB) {
 	rentalController := &controllers.RentalController{}
 	bookingReportController := &controllers.BookingReportController{}
 
-	e.POST("/topup/:user_id", topUpController.TopUp, , jwt.WithConfig(config))
-	e.POST("/topup/user/:user_id", topUpController.TopupUser, , jwt.WithConfig(config))
-	e.POST("/rentals/:user_id", rentalController.RentProducts, , jwt.WithConfig(config))
-	e.GET("/booking-report", bookingReportController.GetBookingReport, , jwt.WithConfig(config))
-	e.GET("/booking-report/user/:user_id", bookingReportController.GetBookingReportUser, , jwt.WithConfig(config))
+	e.POST("/topup/:user_id", topUpController.TopUp, jwt.WithConfig(config))
+	e.POST("/topup/user/:user_id", topUpController.TopupUser, jwt.WithConfig(config))
+	e.POST("/rentals/:user_id", rentalController.RentProducts, jwt.WithConfig(config))
+	e.GET("/booking-report", bookingReportController.GetBookingReport, jwt.WithConfig(config))
+	e.GET("/booking-report/user/:user_id", bookingReportController.GetBookingReportUser, jwt.WithConfig(config))
+	// Book routes
+	bookRouter := e.Group("/books")
+	bookRouter.POST("", handlers.CreateBook, jwt.WithConfig(config))
+	bookRouter.GET("/:book_id", handlers.GetBook, jwt.WithConfig(config))
+	bookRouter.GET("", handlers.GetAllBooks, jwt.WithConfig(config))
 }
